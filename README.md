@@ -1,7 +1,5 @@
 # Task-3 – Book Management System with Rest API
 
-🚀 **Internship Assignment Task 3**
-
 ### 🎯 Objective
 Build simple REST API endpoints for CRUD operations on books (no database
 needed, store in memory).
