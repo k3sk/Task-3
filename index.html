@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management System</title>
+    <!-- linking our style files cuz we want it looking snatched! 💅 -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- grabbing some cool icons from font awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-book-open header-icon"></i>
+            <h1>BookMS</h1>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Book</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-list"></i>
+                <span>All Books</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search books...">
+            </div>
+            <div class="user-profile">
+                <i class="fas fa-user-circle"></i>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar"></i> Dashboard Overview</h2>
+                </div>
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <i class="fas fa-book"></i>
+                        <h3>Total Books</h3>
+                        <p id="totalBooks">0</p>
+                    </div>
+                </div>
+                <div class="recent-books">
+                    <h3>Recently Added Books</h3>
+                    <div id="recentBooksList" class="books-grid"></div>
+                </div>
+            </section>
+
+            <!-- Add Book Section -->
+            <section id="addbook" class="content-section">
+                <div class="form-container">
+                    <div class="form-header">
+                        <h2><i class="fas fa-plus-circle"></i> Add New Book</h2>
+                    </div>
+                    <form id="addBookForm">
+                        <div class="input-group">
+                            <i class="fas fa-book"></i>
+                            <input type="text" id="title" placeholder="Book Title" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-user-edit"></i>
+                            <input type="text" id="author" placeholder="Author Name" required>
+                        </div>
+                        <button type="submit">
+                            <i class="fas fa-plus"></i>
+                            Add Book
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- All Books Section -->
+            <section id="allbooks" class="content-section">
+                <div class="books-container">
+                    <div class="section-header">
+                        <h2><i class="fas fa-books"></i> Book Collection</h2>
+                    </div>
+                    <div id="booksList" class="books-grid"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // no cap, this is where the magic happens! 🪄
+
+        // making the nav buttons do their thing
+        // when you click a button, it's like "new page who dis?" 📱
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetSection = item.textContent.trim().toLowerCase().replace(' ', '');
+                
+                // Update active states
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+                
+                item.classList.add('active');
+                document.getElementById(targetSection).classList.add('active');
+            });
+        });
+
+        // fetchin all the books from our server
+        async function fetchBooks() {
+            try {
+                const response = await fetch('http://localhost:3000/books');
+                const books = await response.json();
+                displayBooks(books);
+                updateDashboard(books);
+            } catch (error) {
+                console.error('Error fetching books:', error);
+            }
+        }
+
+        // time to add a new book to the squad! 📚
+        document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            
+            try {
+                const response = await fetch('http://localhost:3000/books', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, author })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('title').value = '';
+                    document.getElementById('author').value = '';
+                    fetchBooks(); // Refresh the book list
+                    
+                    // Switch to All Books section
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+                    document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+                    document.getElementById('allbooks').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error adding book:', error);
+            }
+        });
+
+        // oof, time to delete a book from the collection 🗑️
+        async function deleteBook(id) {
+            try {
+                const response = await fetch(`http://localhost:3000/books/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    fetchBooks(); // Refresh the book list
+                }
+            } catch (error) {
+                console.error('Error deleting book:', error);
+            }
+        }
+
+        // time to make the dashboard look fresh af 💯
+        function updateDashboard(books) {
+            document.getElementById('totalBooks').textContent = books.length;
+            
+            // Display recent books (last 3)
+            const recentBooks = books.slice(-3).reverse();
+            const recentBooksDiv = document.getElementById('recentBooksList');
+            recentBooksDiv.innerHTML = '';
+            
+            recentBooks.forEach(book => {
+                const bookDiv = document.createElement('div');
+                bookDiv.className = 'book-item';
+                bookDiv.innerHTML = `
+                    <div class="book-info">
+                        <div class="book-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3>${book.title}</h3>
+                        <p><i class="fas fa-feather-alt"></i> by ${book.author}</p>
+                    </div>
+                `;
+                recentBooksDiv.appendChild(bookDiv);
+            });
+        }
+
+        // this is where we make everything look aesthetic
+        function displayBooks(books) {
+            const booksListDiv = document.getElementById('booksList');
+            booksListDiv.innerHTML = '';
+            
+            books.forEach(book => {
+                const bookDiv = document.createElement('div');
+                bookDiv.className = 'book-item';
+                bookDiv.innerHTML = `
+                    <div class="book-info">
+                        <div class="book-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3>${book.title}</h3>
+                        <p><i class="fas fa-feather-alt"></i> by ${book.author}</p>
+                    </div>
+                    <div class="book-actions">
+                        <button onclick="deleteBook(${book.id})" class="delete-btn">
+                            <i class="fas fa-trash-alt"></i>
+                            Delete
+                        </button>
+                    </div>
+                `;
+                booksListDiv.appendChild(bookDiv);
+            });
+        }
+
+
+
+        // time to yeet a book from the collection 🗑️
+        async function deleteBook(id) {
+            await fetch(`http://localhost:3000/books/${id}`, {
+                method: 'DELETE'
+            });
+            fetchBooks();
+        }
+        // Initial load
+        fetchBooks();
+    </script>
+</body>
+</html>
